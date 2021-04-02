@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Autobot</title>
+    <link type="text/css" href="css/theme.css" rel="stylesheet">
+	<link type="text/css" href="css/base.css" rel="stylesheet">
+	<link type="text/css" href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+	<link type="text/css" href="bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+	<link type="text/css" href="images/icons/css/font-awesome.css" rel="stylesheet">
+	<link type="text/css" href='http://fonts.googleapis.com/css?family=Open+Sans:400italic,600italic,400,600' rel='stylesheet'>
+</head>
+<body>
+
+	<div class="wrapper">
+		<div class="container">
+			<div class="row">
+				<div class="span3">
+					<div class="sidebar">
+
+						<ul class="widget widget-menu unstyled">
+							<li class="active">
+								<a href="/">
+									<i class="menu-icon icon-dashboard"></i>
+									Dashboard
+								</a>
+							</li>
+							<li>
+								<a href="/config">
+									<i class="menu-icon icon-tasks"></i>
+									Configuration
+								</a>
+							</li>
+						</ul><!--/.widget-nav-->
+
+					</div><!--/.sidebar-->
+				</div><!--/.span3-->
+
+
+				<div class="span9">
+					<div class="content">
+
+						<div class="module">
+							<div class="module-head" id="main_header_bar">
+								<h3 id="main_titre">Dashboard</h3>
+                                <h3 id="countdown">Update in: <span>0</span></h3>
+							</div>
+							<div class="module-body">
+								
+
+								
+								<div class="group-control form-horizontal row-fluid">
+									<div class="control-group">
+										<label class="control-label" for="ff_enabled">Bot running</label>
+										<div class="controls">
+											<label class="switch">
+												<input type="checkbox" id="autobot_enabled">
+												<span class="slider round"></span>
+											</label>
+										</div>
+									</div>
+								</div>
+
+
+
+								<!-- <hr /> -->
+								<br />
+
+								<!-- FREEFAUCET TABLE -->
+								<p>
+									<strong>FreeFaucet Statistics</strong>
+								</p>
+								<table class="table table-bordered">
+								  <thead>
+									<tr>
+									  <th>Currency</th>
+									  <th>Claim Count</th>
+									  <th>Balance</th>
+									  <th>Last Claim Amount</th>
+									  <th>Last Claim Time</th>
+									</tr>
+								  </thead>
+								  <tbody id="table-freefaucet">
+									
+								  </tbody>
+								</table>
+
+
+								<br />
+
+								<!-- FAUCETCRYPTO TABLE -->
+								<p>
+									<strong>FaucetCrypto Statistics</strong>
+									<br />
+									<br />
+									<strong>Balance : </strong>
+									<span id="fc_balance">0.0</span><span> Points</span>
+								</p>
+								<table class="table table-bordered">
+								  <thead>
+									<tr>
+									  <th>Activity</th>
+									  <th>Claim Count</th>
+									  <th>Total Earn</th>
+									  <th>Last Claim Time</th>
+									</tr>
+								  </thead>
+								  <tbody id="table-faucetcrypto">
+									
+								  </tbody>
+								</table>
+
+					</div><!--/.content-->
+				</div><!--/.span9-->
+			</div>
+		</div><!--/.container-->
+	</div><!--/.wrapper-->
+
+	<div class="footer">
+		<div class="container">
+			 
+
+			<b class="copyright">&copy; 2021 Autobot </b> All rights reserved.
+		</div>
+	</div>
+
+	<script src="scripts/jquery-1.9.1.min.js"></script>
+	<script src="bootstrap/js/bootstrap.min.js"></script>
+    <script src="scripts/moment.min.js"></script>
+    
+	<script>
+
+		$(document).ready(function() {
+
+			$.get("/start", function( data ) {
+				if (data.state) { $("#autobot_enabled").attr("checked", "checked"); }
+            });
+
+
+
+            const checkbox = document.getElementById('autobot_enabled')
+			checkbox.addEventListener('change', (event) => {
+				event.currentTarget.disabled = true
+				$.ajax({
+					type: "POST",
+					url: "/start",
+					data: {state: event.currentTarget.checked},
+					success: function() {
+						setTimeout(function(){ $("#autobot_enabled").removeAttr("disabled") }, 5000);
+					},
+					dataType: "json"
+				});
+			})
+		});
+
+
+
+
+
+        function my_countdown() {
+            var now = moment().unix()
+            var distance = window.countdown - now;
+
+            $('#countdown span').text(distance)
+
+            if (distance <= 0) {
+                clearInterval(x);
+                //update
+                my_update_table()
+            }
+        }
+
+        function my_update_table() {
+            $.get("/data", function( data ) {
+                //init data ff
+                var ff_cur = data.list
+                var ff_data = data.data.freefaucet
+				var fc_data = data.data.faucetcrypto
+
+                var ff_table_string = ""
+
+				//for each currency fill table
+                ff_cur.forEach(element => {
+                    ff_table_string += `<tr><td>${element}</td><td>${ff_data[element].claimcount}</td><td>${ff_data[element].balance.toFixed(8)}</td>`
+					ff_table_string += `<td>${ff_data[element].lastclaim.toFixed(8)}</td>`
+                    ff_table_string += `<td>${ (ff_data[element].lastDone == 0 ? "never" : moment(parseInt(ff_data[element].lastDone)).fromNow())}</td></tr>`
+                });
+
+
+				var fc_table_string = ""
+				//table part for ptc
+				fc_table_string += `<tr><td>PTC</td><td>${fc_data.ptc.claimcount}</td><td>${fc_data.ptc.totalearn.toFixed(2)}</td><td>${ (fc_data.ptc.lastDone == 0 ? "never" : moment(parseInt(fc_data.ptc.lastDone)).fromNow())}</td></tr>`
+				//table part for shortlink
+				fc_table_string += `<tr><td>Shortlink</td><td>${fc_data.shortlink.claimcount}</td><td>${fc_data.shortlink.totalearn.toFixed(2)}</td><td>${ (fc_data.shortlink.lastDone == 0 ? "never" : moment(parseInt(fc_data.shortlink.lastDone)).fromNow())}</td></tr>`
+				//table part for faucet claim
+				fc_table_string += `<tr><td>Faucet</td><td>${fc_data.faucet.claimcount}</td><td>${fc_data.faucet.totalearn.toFixed(2)}</td><td>${ (fc_data.faucet.lastDone == 0 ? "never" : moment(parseInt(fc_data.faucet.lastDone)).fromNow())}</td></tr>`
+				
+
+
+				$('#fc_balance').html(fc_data.currentbalance);
+                $('#table-freefaucet').html(ff_table_string);
+				$('#table-faucetcrypto').html(fc_table_string);
+
+				
+                //countdown
+                window.countdown = moment().add(50, 'seconds').unix()
+                window.x = setInterval(my_countdown, 1000);
+            });
+        }
+
+		$(document).ready(function() {
+            //window.countdown = moment().add(10, 'seconds').unix()
+			my_update_table()
+		} );
+	</script>
+</body>
